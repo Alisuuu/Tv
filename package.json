@@ -1,14 +1,23 @@
 {
-  "name": "pluto-chat",
+  "name": "m3u8-player-chat",
   "version": "1.0.0",
+  "description": "Player M3U8 com seletor e chat WebSocket",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [
+    "m3u8",
+    "hls",
+    "websocket",
+    "chat",
+    "render"
+  ],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "ws": "^8.13.0"
-  },
-  "engines": {
-    "node": "18.x"
+    "express": "^4.18.2",  // Use versões recentes
+    "ws": "^8.13.0"      // Use versões recentes
   }
 }
