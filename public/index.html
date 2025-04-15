@@ -3,37 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3U8 Player com Chat</title>
+    <title>Player Fixo com Chat</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
 
     <div class="container">
-        <h1>Player M3U8 e Chat</h1>
+        <h1>Player e Chat</h1>
 
         <div class="main-content">
             <div class="player-area">
                 <div class="video-wrapper">
                     <video id="videoPlayer" controls></video>
                 </div>
-                 <div class="controls-footer">
-                    <label for="streamSelector">Escolher Canal:</label>
-                    <select id="streamSelector">
-                        <option value="">-- Selecione --</option>
-                        </select>
                  </div>
-            </div>
 
             <div class="chat-area">
                 <h2>Chat</h2>
                 <div id="chatbox">
                     </div>
-                <div class="chat-input">
-                    <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
-                    <button id="sendButton">Enviar</button>
+                <div class="chat-input-area">
+                     <div class="chat-actions">
+                         <button id="gifButton" title="Enviar GIF (Não implementado)"> G </button>
+                         <button id="stickerButton" title="Enviar Sticker (Não implementado)"> S </button>
+                     </div>
+                     <div class="chat-text-input">
+                         <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
+                         <button id="sendButton">Enviar</button>
+                     </div>
                 </div>
-            </div>
+                 </div>
         </div>
     </div>
 
