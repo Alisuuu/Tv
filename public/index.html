@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <!-- Manter o mesmo CSS anterior -->
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <!-- Manter o mesmo HTML anterior -->
+
+    <script>
+        // Modificar as chamadas para usar o servidor
+        async function loadPlaylist() {
+            const response = await fetch('/api/playlist');
+            return parseM3U(await response.text());
+        }
+
+        async function getTMDBInfo(title) {
+            const response = await fetch(`/api/tmdb?query=${encodeURIComponent(title)}`);
+            return (await response.json()).results[0];
+        }
+
+        // Restante do código JS anterior
+    </script>
+</body>
+</html></html>
