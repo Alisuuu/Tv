@@ -1,5 +1,14 @@
+const http = require('http');
 const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: process.env.PORT || 8080 });
+
+// Crie um servidor HTTP
+const server = http.createServer((req, res) => {
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.end('WebSocket Server');
+});
+
+// Anexe o WebSocket ao mesmo servidor
+const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
   console.log('Novo cliente conectado');
@@ -13,4 +22,8 @@ wss.on('connection', (ws) => {
   });
 });
 
-console.log(`Servidor WebSocket rodando na porta ${process.env.PORT || 8080}`);
+// Use a porta do Render ou 8080 localmente
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
