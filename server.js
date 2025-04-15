@@ -1,37 +1,33 @@
-const http = require('http');
 const WebSocket = require('ws');
-const path = require('path');
-const fs = require('fs');
+const http = require('http');
 
-const server = http.createServer(async (req, res) => {
-  // Servir arquivos estáticos
-  const filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
-  
-  try {
-    const data = await fs.promises.readFile(filePath);
-    res.writeHead(200);
-    res.end(data);
-  } catch (err) {
-    res.writeHead(404);
-    res.end('Página não encontrada');
-  }
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Servidor WebSocket funcionando!');
 });
 
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
-  console.log('Novo cliente conectado');
+  console.log('Novo cliente conectado!');
   
   ws.on('message', (message) => {
-    wss.clients.forEach((client) => {
+    console.log('Mensagem recebida: ', message);
+
+    // Enviar mensagem para todos os clientes conectados
+    wss.clients.forEach(client => {
       if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message.toString());
+        client.send(message);
       }
     });
   });
+
+  ws.on('close', () => {
+    console.log('Cliente desconectado!');
+  });
 });
 
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+const port = process.env.PORT || 8080;  // Use a porta fornecida pelo Render
+server.listen(port, () => {
+  console.log(`Servidor WebSocket rodando na porta ${port}`);
 });
