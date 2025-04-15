@@ -1,208 +1,42 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pluto TV Mobile</title>
-  <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
-  <style>
-    body {
-      margin: 0;
-      background: #000;
-      font-family: Arial, sans-serif;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    .video-container {
-      position: relative;
-      width: 100%;
-      padding-top: 56.25%;
-      background: #000;
-    }
-
-    #video {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    .lista-container {
-      background: #0a0a0a;
-      padding: 10px;
-      overflow-x: auto;
-      white-space: nowrap;
-      border-top: 2px solid #222;
-    }
-
-    .canal-btn {
-      display: inline-block;
-      background: #6e2aad;
-      color: #fff;
-      padding: 10px 15px;
-      margin: 5px;
-      border: none;
-      border-radius: 10px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .canal-btn:hover {
-      background: #8b3dd6;
-    }
-
-    .chat-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background: #111;
-      border-top: 2px solid #222;
-    }
-
-    #chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-      color: #fff;
-    }
-
-    .message {
-      background: #222;
-      padding: 8px 12px;
-      margin-bottom: 8px;
-      border-radius: 12px;
-      max-width: 80%;
-      word-break: break-word;
-    }
-
-    .chat-input {
-      display: flex;
-      padding: 10px;
-      border-top: 1px solid #333;
-      background: #181818;
-    }
-
-    #message {
-      flex: 1;
-      padding: 10px;
-      background: #2c2c2c;
-      border: none;
-      border-radius: 20px;
-      color: #fff;
-      margin-right: 10px;
-    }
-
-    button.enviar {
-      padding: 10px 16px;
-      background: #6e2aad;
-      border: none;
-      border-radius: 20px;
-      color: white;
-      cursor: pointer;
-    }
-
-    button.enviar:hover {
-      background: #8b3dd6;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3U8 Player com Chat</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
-  <div class="video-container">
-    <video id="video" class="video-js vjs-default-skin" controls playsinline></video>
-  </div>
 
-  <div class="lista-container" id="lista"></div>
+    <div class="container">
+        <h1>Player M3U8 e Chat</h1>
 
-  <div class="chat-container">
-    <div id="chat-messages"></div>
-    <div class="chat-input">
-      <input type="text" id="message" placeholder="Digite sua mensagem..." />
-      <button class="enviar" onclick="sendMessage()">Enviar</button>
+        <div class="main-content">
+            <div class="player-area">
+                <div class="video-wrapper">
+                    <video id="videoPlayer" controls></video>
+                </div>
+                 <div class="controls-footer">
+                    <label for="streamSelector">Escolher Canal:</label>
+                    <select id="streamSelector">
+                        <option value="">-- Selecione --</option>
+                        </select>
+                 </div>
+            </div>
+
+            <div class="chat-area">
+                <h2>Chat</h2>
+                <div id="chatbox">
+                    </div>
+                <div class="chat-input">
+                    <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
+                    <button id="sendButton">Enviar</button>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script>
-    const player = videojs('video', {
-      fluid: true,
-      responsive: true,
-      liveui: true,
-    });
-
-    function tocarStream(nome, url) {
-      if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(player.tech().el());
-        player.play();
-      } else if (player.tech().el().canPlayType('application/vnd.apple.mpegurl')) {
-        player.src({ type: 'application/x-mpegURL', src: url });
-        player.play();
-      }
-    }
-
-    async function carregarLista() {
-      try {
-        const res = await fetch('canais.txt');
-        const texto = await res.text();
-        const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
-        const listaEl = document.getElementById('lista');
-
-        for (let i = 0; i < linhas.length; i += 2) {
-          const nome = linhas[i];
-          const link = linhas[i + 1];
-          if (nome && link) {
-            const btn = document.createElement('button');
-            btn.className = 'canal-btn';
-            btn.textContent = nome;
-            btn.onclick = () => tocarStream(nome, link);
-            listaEl.appendChild(btn);
-          }
-        }
-
-        if (linhas[1]) {
-          tocarStream(linhas[0], linhas[1]);
-        }
-      } catch (err) {
-        console.error('Erro ao carregar canais.txt:', err);
-        document.getElementById('lista').innerHTML = '<p style="color:#ccc;">Erro ao carregar canais.txt</p>';
-      }
-    }
-
-    carregarLista();
-  </script>
-
-  <script>
-    const ws = new WebSocket('wss://seuservidorwebsocket.com'); // Altere para seu WebSocket
-    const chatMessages = document.getElementById('chat-messages');
-
-    ws.onmessage = function (event) {
-      const msg = document.createElement('div');
-      msg.className = 'message';
-      msg.textContent = event.data;
-      chatMessages.appendChild(msg);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    };
-
-    function sendMessage() {
-      const input = document.getElementById('message');
-      const text = input.value.trim();
-      if (text) {
-        ws.send(text);
-        input.value = '';
-        input.focus();
-      }
-    }
-
-    document.getElementById('message').addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') sendMessage();
-    });
-  </script>
+    <script src="script.js"></script>
 </body>
 </html>
