@@ -1,75 +1,72 @@
-// server.js Completo
+// server.js Completo (Adaptado para estrutura Título/Link em linhas separadas)
 
 // --- Dependências ---
 const express = require('express');
-const http = require('http'); // Necessário para integrar Express e WebSocket na mesma porta
+const http = require('http');
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
 
 // --- Configuração Inicial ---
 const app = express();
-const PORT = process.env.PORT || 3000; // Porta definida pelo Render ou 3000 localmente
+const PORT = process.env.PORT || 3000;
 
 // --- Middleware ---
-// Servir arquivos estáticos da pasta 'public' (HTML, CSS, JS do cliente)
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Rotas da API ---
 
-// Endpoint API para buscar a lista de streams (COM MAIS LOGS)
+// Endpoint API para buscar a lista de streams (ADAPTADO PARA NOVA ESTRUTURA)
 app.get('/api/streams', (req, res) => {
     const filePath = path.join(__dirname, 'lista.txt');
-    console.log(`[LOG API] Tentando ler o arquivo em: ${filePath}`); // Log 1: Caminho do arquivo
+    console.log(`[LOG API v2] Tentando ler o arquivo em: ${filePath}`); // Log 1
 
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {
-            console.error("[LOG API] ERRO ao ler lista.txt:", err); // Log 2: Erro na leitura
-            // Envia o erro específico para o cliente também, ajuda a depurar no navegador
+            console.error("[LOG API v2] ERRO ao ler lista.txt:", err); // Log 2
             return res.status(500).json({
                 error: 'Erro ao carregar a lista de streams do servidor.',
-                details: err.message // Mensagem de erro real
+                details: err.message
             });
         }
 
-        console.log("[LOG API] Arquivo lista.txt lido com sucesso."); // Log 3: Sucesso na leitura
-        // console.log("[LOG API] Conteúdo bruto:\n", data); // Descomente se quiser ver o conteúdo exato
+        console.log("[LOG API v2] Arquivo lista.txt lido com sucesso."); // Log 3
+        // console.log("[LOG API v2] Conteúdo bruto:\n", data);
 
         try {
-            const lines = data.split('\n');
-            console.log(`[LOG API] Número de linhas encontradas: ${lines.length}`); // Log 4: Total de linhas
+            const lines = data.split('\n') // Divide em linhas
+                              .map(line => line.trim()) // Remove espaços extras
+                              .filter(line => line); // Remove linhas vazias
 
-            const streams = lines
-                .map(line => line.trim())
-                .filter(line => {
-                    const hasContent = !!line; // Linha não é vazia
-                    const hasSeparator = line.includes('|');
-                    // Log para cada linha sendo filtrada
-                    // console.log(`[LOG API] Filtrando linha: "${line}" | Tem conteúdo: ${hasContent} | Tem separador: ${hasSeparator}`);
-                    return hasContent && hasSeparator; // Garante que não está vazia E tem o separador '|'
-                 })
-                .map(line => {
-                    const parts = line.split('|');
-                    if (parts.length >= 2) {
-                         const streamData = {
-                             title: parts[0].trim(),
-                             url: parts[1].trim()
-                         };
-                         // console.log('[LOG API] Stream processado:', streamData); // Log de stream individual
-                         return streamData;
+            console.log(`[LOG API v2] Número de linhas não vazias encontradas: ${lines.length}`); // Log 4
+
+            const streams = [];
+            // Itera pelas linhas de 2 em 2 (Título, Link)
+            for (let i = 0; i < lines.length; i += 2) {
+                // Garante que existe um par (Título e Link)
+                if (i + 1 < lines.length) {
+                    const title = lines[i];
+                    const url = lines[i + 1];
+                    // Validação básica da URL (opcional, mas útil)
+                    if (url.startsWith('http://') || url.startsWith('https://')) {
+                        const streamData = { title: title, url: url };
+                        streams.push(streamData);
+                        // console.log(`[LOG API v2] Par adicionado: Título='${title}', URL='${url}'`);
+                    } else {
+                         console.warn(`[LOG API v2] URL inválida ou faltando no par iniciado com Título='${title}'. Link encontrado='${url}'. Par ignorado.`);
                     }
-                     console.warn(`[LOG API] Linha ignorada (formato inválido após split): "${line}"`);
-                     return null; // Ignora linhas mal formatadas que passaram o filtro inicial
-                })
-                .filter(stream => stream !== null); // Remove nulos de linhas mal formatadas
+                } else {
+                    console.warn(`[LOG API v2] Linha de Título encontrada sem um Link correspondente no final do arquivo: "${lines[i]}". Ignorando.`);
+                }
+            }
 
-            console.log(`[LOG API] Número de streams processados com sucesso: ${streams.length}`); // Log 5: Streams válidos
-            console.log("[LOG API] Enviando streams para o frontend:", JSON.stringify(streams, null, 2)); // Log 6: Resultado final
+            console.log(`[LOG API v2] Número de streams processados com sucesso: ${streams.length}`); // Log 5
+            console.log("[LOG API v2] Enviando streams para o frontend:", JSON.stringify(streams, null, 2)); // Log 6
 
             res.json(streams);
 
         } catch (parseError) {
-            console.error("[LOG API] ERRO ao processar o conteúdo de lista.txt:", parseError); // Log 7: Erro no processamento
+            console.error("[LOG API v2] ERRO ao processar o conteúdo de lista.txt:", parseError); // Log 7
             res.status(500).json({
                 error: 'Erro ao processar a lista de streams no servidor.',
                 details: parseError.message
@@ -78,59 +75,34 @@ app.get('/api/streams', (req, res) => {
     });
 });
 
-// Rota principal (opcional, se /public/index.html for servido automaticamente)
-// app.get('/', (req, res) => {
-//    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-// });
-
-
 // --- Configuração do Servidor HTTP e WebSocket ---
-
-// Criar servidor HTTP a partir do app Express
-// Isso é necessário para que o servidor WebSocket possa "ouvir" na mesma porta
 const server = http.createServer(app);
-
-// Criar servidor WebSocket e anexá-lo ao servidor HTTP
 const wss = new WebSocket.Server({ server });
 
 console.log('[WebSocket] Servidor WebSocket iniciando...');
 
-// Lógica para quando um cliente WebSocket se conecta
 wss.on('connection', (ws) => {
     console.log('[WebSocket] Cliente conectado.');
-
-    // Lógica para quando uma mensagem é recebida de um cliente
     ws.on('message', (message) => {
-        const messageString = message.toString(); // Converte buffer para string
+        const messageString = message.toString();
         console.log('[WebSocket] Mensagem recebida:', messageString);
-
-        // Broadcast (reenviar) a mensagem para TODOS os outros clientes conectados
         wss.clients.forEach((client) => {
-            // Verifica se o cliente está pronto para receber e não é o próprio remetente
             if (client !== ws && client.readyState === WebSocket.OPEN) {
                 try {
-                    client.send(messageString); // Reenvia a mensagem recebida
+                    client.send(messageString);
                 } catch (sendError) {
                     console.error('[WebSocket] Erro ao enviar mensagem para cliente:', sendError);
                 }
             }
         });
     });
-
-    // Lógica para quando um cliente se desconecta
     ws.on('close', () => {
         console.log('[WebSocket] Cliente desconectado.');
     });
-
-    // Lógica para lidar com erros na conexão WebSocket do cliente
     ws.on('error', (error) => {
         console.error('[WebSocket] Erro na conexão do cliente:', error);
     });
-
-    // Opcional: Enviar uma mensagem de boas-vindas apenas para o cliente que acabou de conectar
-    // ws.send('Bem-vindo ao chat!');
 });
-
 
 // --- Iniciar o Servidor ---
 server.listen(PORT, () => {
