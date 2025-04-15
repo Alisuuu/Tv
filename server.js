@@ -1,13 +1,22 @@
 const http = require('http');
 const WebSocket = require('ws');
+const path = require('path');
+const fs = require('fs');
 
-// Crie um servidor HTTP
-const server = http.createServer((req, res) => {
-  res.writeHead(200, {'Content-Type': 'text/plain'});
-  res.end('WebSocket Server');
+const server = http.createServer(async (req, res) => {
+  // Servir arquivos estáticos
+  const filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
+  
+  try {
+    const data = await fs.promises.readFile(filePath);
+    res.writeHead(200);
+    res.end(data);
+  } catch (err) {
+    res.writeHead(404);
+    res.end('Página não encontrada');
+  }
 });
 
-// Anexe o WebSocket ao mesmo servidor
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
@@ -22,8 +31,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Use a porta do Render ou 8080 localmente
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
