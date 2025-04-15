@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <!-- Manter o mesmo CSS anterior -->
-    <link rel="stylesheet" href="/style.css">
-</head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suquinho Flix 🍹</title>
     <style>
-        /* === ESTILOS GERAIS === */
         :root {
             --primary: #ff6b00;
             --dark: #0a0a0a;
@@ -25,7 +24,6 @@
             overflow-x: hidden;
         }
 
-        /* === HEADER === */
         .header {
             padding: 1rem 2rem;
             background: linear-gradient(to bottom, rgba(10,10,10,0.95) 0%, transparent 100%);
@@ -42,12 +40,10 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* === CONTEÚDO PRINCIPAL === */
         .content {
             padding: 120px 2rem 2rem;
         }
 
-        /* === CATEGORIAS === */
         .category {
             margin: 3rem 0;
         }
@@ -61,7 +57,6 @@
             letter-spacing: 1px;
         }
 
-        /* === ITENS DA PLAYLIST === */
         .items-container {
             display: flex;
             gap: 1rem;
@@ -138,7 +133,6 @@
             overflow: hidden;
         }
 
-        /* === ANIMAÇÕES === */
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -153,7 +147,6 @@
             margin: 2rem auto;
         }
 
-        /* === RESPONSIVIDADE === */
         @media (max-width: 768px) {
             .header { padding: 1rem; }
             .content { padding: 100px 1rem 1rem; }
@@ -161,22 +154,177 @@
             .category-title { font-size: 1.2rem; }
         }
     </style>
+</head>
 <body>
-    <!-- Manter o mesmo HTML anterior -->
+    <header class="header">
+        <div class="logo">SUQUINHO FLIX</div>
+    </header>
+
+    <main class="content" id="content">
+        <div id="loading" style="text-align: center; padding: 50px;">
+            <div class="loading"></div>
+            <p>Carregando sua diversão... 🍹</p>
+        </div>
+    </main>
 
     <script>
-        // Modificar as chamadas para usar o servidor
+        const PROXY_URL = 'https://api.codetabs.com/v1/proxy/?quest=';
+        const M3U_URL = 'http://server10.maxcdn.link:2052/get.php?username=md854a&password=abc125ad&type=m3u_plus&output=m3u8';
+        const TMDB_API_KEY = '5e5da432e96174227b25086fe8637985';
+
         async function loadPlaylist() {
-            const response = await fetch('/api/playlist');
-            return parseM3U(await response.text());
+            try {
+                const response = await fetch(PROXY_URL + encodeURIComponent(M3U_URL));
+                if (!response.ok) throw new Error('Erro na playlist');
+                return parseM3U(await response.text());
+            } catch (error) {
+                showError('Falha ao carregar os canais 🚫');
+                console.error(error);
+                return [];
+            }
+        }
+
+        function parseM3U(data) {
+            const entries = [];
+            const lines = data.split('\n');
+            let currentEntry = {};
+
+            lines.forEach(line => {
+                if (line.startsWith('#EXTINF')) {
+                    const info = line.match(/tvg-id="(.*?)".*?tvg-name="(.*?)".*?group-title="(.*?)".*?,(.*)/);
+                    currentEntry = {
+                        tvgId: info?.[1] || '',
+                        tvgName: info?.[4]?.trim() || 'Canal Desconhecido',
+                        group: info?.[3]?.trim() || 'Geral',
+                        url: ''
+                    };
+                } else if (line.startsWith('http')) {
+                    currentEntry.url = line.trim();
+                    entries.push(currentEntry);
+                }
+            });
+            
+            return entries;
         }
 
         async function getTMDBInfo(title) {
-            const response = await fetch(`/api/tmdb?query=${encodeURIComponent(title)}`);
-            return (await response.json()).results[0];
+            try {
+                const url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}`;
+                const response = await fetch(PROXY_URL + encodeURIComponent(url));
+                return (await response.json()).results[0];
+            } catch (error) {
+                console.warn('Erro TMDB:', error);
+                return null;
+            }
         }
 
-        // Restante do código JS anterior
+        async function renderContent() {
+            try {
+                const playlist = await loadPlaylist();
+                if (!playlist.length) return showError('Playlist vazia 😞');
+
+                const categories = playlist.reduce((acc, item) => {
+                    acc[item.group] = acc[item.group] || [];
+                    acc[item.group].push(item);
+                    return acc;
+                }, {});
+
+                document.getElementById('content').innerHTML = Object.entries(categories).map(([group, items]) => `
+                    <div class="category">
+                        <h2 class="category-title">${group}</h2>
+                        <div class="items-container">
+                            ${items.map(item => `
+                                <div class="item" data-url="${item.url}">
+                                    <div class="item-loading"></div>
+                                    <div class="item-info">
+                                        <h3>${item.tvgName}</h3>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+                document.querySelectorAll('.item').forEach(async (itemEl, index) => {
+                    const item = playlist[index];
+                    const tmdbInfo = await getTMDBInfo(item.tvgName);
+                    
+                    if (tmdbInfo?.poster_path) {
+                        itemEl.innerHTML = `
+                            <img src="${PROXY_URL}${encodeURIComponent(`https://image.tmdb.org/t/p/w500${tmdbInfo.poster_path}`)}" 
+                                 class="item-thumbnail" 
+                                 alt="${tmdbInfo.title || tmdbInfo.name}">
+                            <div class="item-info">
+                                <h3>${tmdbInfo.title || tmdbInfo.name}</h3>
+                                ${tmdbInfo.overview ? `<p>${tmdbInfo.overview.substring(0, 80)}...</p>` : ''}
+                            </div>
+                        `;
+                    }
+                    
+                    itemEl.addEventListener('click', () => playStream(item.url));
+                });
+
+            } catch (error) {
+                showError('Erro crítico 💥');
+                console.error(error);
+            } finally {
+                document.getElementById('loading').remove();
+            }
+        }
+
+        function playStream(url) {
+            const playerWindow = window.open('', '_blank');
+            playerWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Player - Suquinho Flix</title>
+                        <script src="https://cdn.jsdelivr.net/npm/hls.js@1.1.0"></script>
+                        <style>
+                            body { margin: 0; background: #000; }
+                            video { width: 100vw; height: 100vh; }
+                        </style>
+                    </head>
+                    <body>
+                        <video id="player" controls autoplay></video>
+                        <script>
+                            const video = document.getElementById('player');
+                            const streamUrl = '${PROXY_URL}${encodeURIComponent(url)}';
+                            
+                            if (Hls.isSupported()) {
+                                const hls = new Hls();
+                                hls.loadSource(streamUrl);
+                                hls.attachMedia(video);
+                                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+                            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                                video.src = streamUrl;
+                                video.addEventListener('loadedmetadata', () => video.play());
+                            }
+                        <\/script>
+                    </body>
+                </html>
+            `);
+        }
+
+        function showError(msg) {
+            document.getElementById('content').innerHTML = `
+                <div style="text-align: center; padding: 50px; color: var(--primary)">
+                    <h2>🍹 Oops! Algo deu errado...</h2>
+                    <p>${msg}</p>
+                    <button onclick="location.reload()" style="
+                        margin-top: 20px;
+                        padding: 10px 20px;
+                        background: var(--primary);
+                        border: none;
+                        border-radius: 5px;
+                        color: white;
+                        cursor: pointer;
+                    ">Tentar Novamente</button>
+                </div>
+            `;
+        }
+
+        // Iniciar
+        renderContent();
     </script>
 </body>
-</html></html>
+</html>
